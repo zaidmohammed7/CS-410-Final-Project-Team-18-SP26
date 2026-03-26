@@ -5,7 +5,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classifica
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-def create_pipeline():
+def create_tfidf_pipeline():
     """
     Create a scikit-learn pipeline with TfidfVectorizer and LogisticRegression.
     """
@@ -15,31 +15,31 @@ def create_pipeline():
     ])
     return pipeline
 
-def train_model(train_df):
+def train_tfidf_model(train_df):
     """
     Train the model on the training DataFrame.
     """
-    pipeline = create_pipeline()
+    pipeline = create_tfidf_pipeline()
     X_train = train_df['text'].fillna("")
     y_train = train_df['label']
     
-    print("Training model...")
+    print("Training TF-IDF model...")
     pipeline.fit(X_train, y_train)
     return pipeline
 
-def get_predictions(model, test_df):
+def get_tfidf_predictions(model, test_df):
     """
     Return predictions for the test DataFrame.
     """
     X_test = test_df['text'].fillna("")
     return model.predict(X_test)
 
-def evaluate_model(y_true, y_pred, output_path="outputs/confusion_matrix.png"):
+def evaluate_tfidf_model(y_true, y_pred, output_path="outputs/tfidf_confusion_matrix.png"):
     """
     Calculate metrics and generate a confusion matrix plot.
     """
     # Print metrics
-    print("\n--- Model Evaluation ---")
+    print("\n--- TF-IDF Model Evaluation ---")
     print(f"Accuracy:  {accuracy_score(y_true, y_pred):.4f}")
     print(f"Precision: {precision_score(y_true, y_pred):.4f}")
     print(f"Recall:    {recall_score(y_true, y_pred):.4f}")

@@ -3,7 +3,8 @@ import pandas as pd
 
 from src.preprocessor import load_enron_dataset, load_spamassassin_dataset, preprocess
 from src.eda import run_eda
-from src.model import train_model, get_predictions, evaluate_model
+from src.TF_IDF_model import train_tfidf_model, get_tfidf_predictions, evaluate_tfidf_model
+from src.w2v_model import train_w2v_model, get_w2v_predictions, evaluate_w2v_model
 
 TRAIN_CSV = Path("dataset/train/enron_spam_data.csv")
 TEST_DIR = Path("dataset/test")
@@ -26,14 +27,17 @@ def main():
 
     # Model Pipeline
     print("\nTraining set prepared for model...")
-    model = train_model(train_df)
+    tfidf_model = train_tfidf_model(train_df)
+    w2v_model = train_w2v_model(train_df)
     
     # Prediction on test set
     print("Generating predictions on test set...")
-    predictions = get_predictions(model, test_df)
+    tfidf_predictions = get_tfidf_predictions(tfidf_model, test_df)
+    w2v_predictions = get_w2v_predictions(w2v_model, test_df)
     
     # Evaluation
-    evaluate_model(test_df['label'], predictions)
+    evaluate_tfidf_model(test_df['label'], tfidf_predictions)
+    evaluate_w2v_model(test_df['label'], w2v_predictions)
 
     print("\n--- Pipeline Complete ---")
     print("Outputs generated in 'outputs/' directory.")
