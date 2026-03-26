@@ -1,0 +1,96 @@
+﻿python : C:\Users\zaidk\AppData\
+Local\Programs\Python\Python314\
+Lib\site-packages\sklearn\metric
+s\_classification.py:1833: 
+UndefinedMetricWarning: 
+Precision is ill-defined and 
+being set to 0.0 due to no 
+predicted samples. Use 
+`zero_division` parameter to 
+control this behavior.
+At line:1 char:1
++ python main.py > 
+final_results.log 2>&1; 
+Get-Content final_results.lo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo          : N 
+   otSpecified: (C:\Users\zaid  
+  k\... this behavior.:String   
+ ) [], RemoteException
+    + FullyQualifiedErrorId : N 
+   ativeCommandError
+ 
+  _warn_prf(average, modifier, 
+f"{metric.capitalize()} is", 
+result.shape[0])
+C:\Users\zaidk\AppData\Local\Pro
+grams\Python\Python314\Lib\site-
+packages\sklearn\metrics\_classi
+fication.py:1833: 
+UndefinedMetricWarning: 
+Precision is ill-defined and 
+being set to 0.0 in labels with 
+no predicted samples. Use 
+`zero_division` parameter to 
+control this behavior.
+  _warn_prf(average, modifier, 
+f"{metric.capitalize()} is", 
+result.shape[0])
+C:\Users\zaidk\AppData\Local\Pro
+grams\Python\Python314\Lib\site-
+packages\sklearn\metrics\_classi
+fication.py:1833: 
+UndefinedMetricWarning: 
+Precision is ill-defined and 
+being set to 0.0 in labels with 
+no predicted samples. Use 
+`zero_division` parameter to 
+control this behavior.
+  _warn_prf(average, modifier, 
+f"{metric.capitalize()} is", 
+result.shape[0])
+C:\Users\zaidk\AppData\Local\Pro
+grams\Python\Python314\Lib\site-
+packages\sklearn\metrics\_classi
+fication.py:1833: 
+UndefinedMetricWarning: 
+Precision is ill-defined and 
+being set to 0.0 in labels with 
+no predicted samples. Use 
+`zero_division` parameter to 
+control this behavior.
+  _warn_prf(average, modifier, 
+f"{metric.capitalize()} is", 
+result.shape[0])
+Loading datasets...
+  Train samples: 33716 | Spam: 17171
+  Test samples:  3898  | Spam: 1397
+Preprocessing...
+Generating EDA plots...
+EDA plots saved in 'outputs/' directory.
+
+Training set prepared for model...
+Training model...
+Generating predictions on test set...
+
+--- Model Evaluation ---
+Accuracy:  0.6416
+Precision: 0.0000
+Recall:    0.0000
+F1-score:  0.0000
+
+Classification Report:
+              precision    recall  f1-score   support
+
+         Ham       0.64      1.00      0.78      2501
+        Spam       0.00      0.00      0.00      1397
+
+    accuracy                           0.64      3898
+   macro avg       0.32      0.50      0.39      3898
+weighted avg       0.41      0.64      0.50      3898
+
+Confusion matrix saved to 'outputs/confusion_matrix.png'.
+
+--- Pipeline Complete ---
+Outputs generated in 'outputs/' directory.

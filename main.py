@@ -1,6 +1,9 @@
 from pathlib import Path
+import pandas as pd
 
 from src.preprocessor import load_enron_dataset, load_spamassassin_dataset, preprocess
+from src.eda import run_eda
+from src.model import train_model, get_predictions, evaluate_model
 
 TRAIN_CSV = Path("dataset/train/enron_spam_data.csv")
 TEST_DIR = Path("dataset/test")
@@ -17,19 +20,24 @@ def main():
     train_df = preprocess(train_df)
     test_df = preprocess(test_df)
 
-    # Check preprocessing delete later
-    print("\n--- Train sample (ham) ---")
-    print(train_df[train_df["label"] == 0]["text"].iloc[0][:300])
+    # Combine datasets for EDA purposes as requested ("across datasets")
+    combined_df = pd.concat([train_df, test_df], ignore_index=True)
+    run_eda(combined_df)
 
-    print("\n--- Train sample (spam) ---")
-    print(train_df[train_df["label"] == 1]["text"].iloc[0][:300])
+    # Model Pipeline
+    print("\nTraining set prepared for model...")
+    model = train_model(train_df)
+    
+    # Prediction on test set
+    print("Generating predictions on test set...")
+    predictions = get_predictions(model, test_df)
+    
+    # Evaluation
+    evaluate_model(test_df['label'], predictions)
 
-    print("\n--- Test sample (ham) ---")
-    print(test_df[test_df["label"] == 0]["text"].iloc[0][:300])
-
-    print("\n--- Test sample (spam) ---")
-    print(test_df[test_df["label"] == 1]["text"].iloc[0][:300])
-
+    print("\n--- Pipeline Complete ---")
+    print("Outputs generated in 'outputs/' directory.")
 
 if __name__ == "__main__":
     main()
+
