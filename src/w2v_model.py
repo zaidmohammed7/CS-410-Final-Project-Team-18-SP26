@@ -8,7 +8,7 @@ import numpy as np
 
 # Create a Word2Vec Vectorizer for sklearn.pipline
 class w2v_Vectorizer:
-	def __init__(self, vector_size=100, window=5, min_count=1, workers=1, epochs=20):
+	def __init__(self, vector_size=50, window=5, min_count=5, workers=4, epochs=5):
 		self.model = None
 		self.vector_size = vector_size
 		self.window = window
@@ -26,7 +26,8 @@ class w2v_Vectorizer:
 			window=self.window,
 			min_count=self.min_count,
 			workers=self.workers,
-			epochs=self.epochs
+			epochs=self.epochs,
+			seed=12345
 		)
 		return self
 	
@@ -46,7 +47,7 @@ class w2v_Vectorizer:
 		return np.array(vectors)
 	
 # Create a scikit-learn pipeline with Word2Vec Vectorier and LogisticRegression.
-def create_w2v_pipeline(vector_size=100, window=5, min_count=1, workers=1, epochs=20):
+def create_w2v_pipeline(vector_size=50, window=5, min_count=5, workers=4, epochs=5):
 	pipeline = Pipeline([
         ('w2v', w2v_Vectorizer(vector_size, window, min_count, workers, epochs)),
         ('clf', LogisticRegression(random_state=42, max_iter=1000, class_weight="balanced"))
