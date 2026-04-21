@@ -1,3 +1,6 @@
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
 import re
 import email
 import email.message
@@ -6,10 +9,19 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+# Download necessary NLTK data
+try:
+    nltk.download('wordnet', quiet=True)
+    nltk.download('omw-1.4', quiet=True)
+except Exception:
+    pass
+
 URL_PATTERN = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
 WHITESPACE_PATTERN = re.compile(r"\s+")
 PUNCTUATION_PATTERN = re.compile(r"[!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]")
 EMAIL_PATTERN = re.compile(r"[\w\.-]+@[\w\.-]+\.\w+")
+
+LEMMATIZER = WordNetLemmatizer()
 
 
 def ensure_archive_extracted(target_path: Path, archive_path: Path, dataset_root: Path) -> None:
@@ -97,9 +109,13 @@ def load_training_dataset(csv_path: Path) -> pd.DataFrame:
 def load_spamassassin_dataset(data_dir: Path) -> pd.DataFrame:
     records = []
 
+    if not (data_dir / "easy_ham").exists() and (data_dir / "test").exists():
+        data_dir = data_dir / "test"
+    print(f"Loading SpamAssassin dataset from: {data_dir}")
     for folder, label in [("easy_ham", 0), ("spam_2", 1)]:
         folder_path = data_dir / folder
         if not folder_path.exists():
+            print(f"  Warning: folder {folder_path} does not exist.")
             continue
         for file_path in sorted(folder_path.iterdir()):
             if file_path.is_file() and not file_path.name.startswith("."):
@@ -117,7 +133,11 @@ def clean_text(text: str) -> str:
     text = re.sub(r"http\S+|www\.\S+", " URL ", text) # replace URLs
     text = re.sub(r"[^a-zA-Z0-9\s\!\?\.\,]", " ", text) # keep basic punctuation
     text = re.sub(r"\s+", " ", text).strip().lower()
-    return text
+    
+    # Tokenize and lemmatize
+    words = text.split()
+    lemmatized_words = [LEMMATIZER.lemmatize(w) for w in words]
+    return " ".join(lemmatized_words)
 
 
 def _safe_ratio(numerator: int, denominator: int) -> float:
@@ -212,6 +232,7 @@ def clean_dataset(
     dedupe_subset: Optional[List[str]] = None,
 ) -> pd.DataFrame:
     df = df.copy()
+    df = df.loc[:, ~df.columns.duplicated()]
     initial_rows = len(df)
 
     if "text" not in df.columns:
@@ -227,7 +248,9 @@ def clean_dataset(
     removed_duplicates = 0
     conflicting_groups = 0
     if deduplicate:
-        conflicting_groups = int((df.groupby("text")["label"].nunique() > 1).sum())
+        # print(f"DEBUG: columns are {df.columns.tolist()}") # Temporarily disabled
+        conflicting_counts = df.groupby("text")["label"].nunique()
+        conflicting_groups = int((conflicting_counts > 1).sum().sum()) if isinstance(conflicting_counts, pd.DataFrame) else int((conflicting_counts > 1).sum())
         subset = dedupe_subset if dedupe_subset is not None else ["text", "label"]
         duplicate_mask = df.duplicated(subset=subset, keep="first")
         removed_duplicates = int(duplicate_mask.sum())

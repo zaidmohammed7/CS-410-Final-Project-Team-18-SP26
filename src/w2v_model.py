@@ -1,9 +1,13 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report, accuracy_score, precision_score, recall_score, f1_score, PrecisionRecallDisplay
 import matplotlib.pyplot as plt
 from pathlib import Path
-from gensim.models import Word2Vec
+try:
+    from gensim.models import Word2Vec
+    GENSIM_AVAILABLE = True
+except ImportError:
+    GENSIM_AVAILABLE = False
 import numpy as np
 
 # Create a Word2Vec Vectorizer for sklearn.pipline
@@ -68,10 +72,13 @@ def get_w2v_predictions(model, test_df):
     X_test = test_df['text'].fillna("")
     return model.predict(X_test)
 
-# Calculate metrics and generate a confusion matrix plot.
-def evaluate_w2v_model(y_true, y_pred, output_path="outputs/w2v_confusion_matrix.png"):
+# Calculate metrics and generate plots (Confusion Matrix and PR Curve).
+def evaluate_w2v_model(y_true, y_pred, model, test_df, model_name="w2v", output_dir="outputs"):
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+    
     # Print metrics
-    print("\n--- Word2Vec Model Evaluation ---")
+    print(f"\n--- {model_name.upper()} Model Evaluation ---")
     print(f"Accuracy:  {accuracy_score(y_true, y_pred):.4f}")
     print(f"Precision: {precision_score(y_true, y_pred):.4f}")
     print(f"Recall:    {recall_score(y_true, y_pred):.4f}")
@@ -84,10 +91,21 @@ def evaluate_w2v_model(y_true, y_pred, output_path="outputs/w2v_confusion_matrix
     cm = confusion_matrix(y_true, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Ham", "Spam"])
     
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(8, 6))
     disp.plot(cmap=plt.cm.Blues)
-    plt.title("Confusion Matrix", fontsize=14)
+    plt.title(f"Confusion Matrix - {model_name}", fontsize=14)
     plt.tight_layout()
-    plt.savefig(output_path)
+    plt.savefig(output_path / f"{model_name}_confusion_matrix.png")
     plt.close()
-    print(f"Confusion matrix saved to '{output_path}'.")
+
+    # Precision-Recall Curve
+    X_test = test_df['text'].fillna("")
+    y_score = model.predict_proba(X_test)[:, 1]
+
+    plt.figure(figsize=(8, 6))
+    display = PrecisionRecallDisplay.from_predictions(y_true, y_score, name=model_name)
+    display.ax_.set_title(f"Precision-Recall Curve - {model_name}")
+    plt.savefig(output_path / f"{model_name}_pr_curve.png")
+    plt.close()
+    
+    print(f"Plots saved to '{output_path}'.")

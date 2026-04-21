@@ -1,3 +1,6 @@
 .DS_Store
 dataset/train/
 dataset/test/
+.venv*/
+__pycache__/
+*.pyc
