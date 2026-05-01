@@ -23,7 +23,7 @@
 }
 
 \begin{abstract}
-Building upon our initial benchmark evaluation of corporate-to-internet cross-corpus domain shift, this final report presents a significantly enhanced, multi-faceted spam detection system. We implemented and benchmarked a comparative machine learning pipeline evaluating three distinct classification approaches: TF-IDF with Logistic Regression, Linear Support Vector Machines (SVM) with Bigram context, and Neural Word Embeddings (Word2Vec). By integrating structural metadata---including URL density, capitalization ratios, and punctuation frequency---alongside NLP-based lemmatization, we successfully addressed the feature sparsity issue identified in our milestone. Our enhanced Linear SVM model achieved an overall accuracy of 73.34\% on the out-of-distribution SpamAssassin corpus, while our Logistic Regression pipeline recorded a peak recall of 96.11\%. These empirical results demonstrate that combining phrase-level semantic context with explicit structural analysis yields a highly resilient defense against evolving spam strategies.
+Building upon our initial benchmark evaluation of corporate-to-internet cross-corpus domain shift, this final report presents a significantly enhanced, multi-faceted spam detection system. We implemented and benchmarked a comparative machine learning pipeline evaluating five distinct classification approaches: a keyword-based Bag-of-Words baseline, TF-IDF with unigrams only, TF-IDF with Bigram context plus structural metadata using both Logistic Regression and Linear SVM, and Neural Word Embeddings (Word2Vec) combined with structural metadata. By integrating 21 structural metadata features---including URL density, capitalization ratios, and punctuation frequency---alongside NLP-based lemmatization and bigram context, we systematically evaluated feature representation strategies for cross-domain spam detection. Our enhanced Linear SVM model achieved an overall accuracy of 74.39\% on the out-of-distribution SpamAssassin corpus, while our Word2Vec pipeline achieved the highest accuracy at 81.21\%. These empirical results demonstrate the comparative strengths and tradeoffs of sparse versus dense text representations when enriched with explicit structural analysis for resilient spam filtering.
 \end{abstract}
 
 \keywords{Spam Detection, Natural Language Processing, TF-IDF, Word2Vec, Linear SVM, Domain Shift, Structural Feature Engineering}
@@ -33,37 +33,40 @@ Building upon our initial benchmark evaluation of corporate-to-internet cross-co
 \section{Introduction}
 Despite continuous advancements in automated heuristic filtering, email remains a primary vector for cyberattacks, phishing, and unwanted promotional distribution. Traditional spam filters often rely on static blacklists or rigid rule-based systems, which malicious actors easily bypass by rotating sender domains and obfuscating vocabulary. 
 
-The core challenge identified during our milestone analysis was "feature sparsity" caused by domain shift. When we trained a baseline unigram model exclusively on internal corporate communications (the Enron dataset) and tested it against general public internet traffic (the Apache SpamAssassin dataset), the model failed to generalize—yielding a 0.00 recall for the spam class. Malicious actors do not merely use different words across different environments; they employ entirely different linguistic and structural patterns.
+The core challenge identified during our milestone analysis was ``feature sparsity'' caused by domain shift. When we trained a baseline unigram model exclusively on internal corporate communications (the TREC 2007 dataset) and tested it against general public internet traffic (the Apache SpamAssassin dataset), the model failed to generalize---yielding a 0.00 recall for the spam class. Malicious actors do not merely use different words across different environments; they employ entirely different linguistic and structural patterns.
 
-For the final phase of our project, we focused on modeling "The Shape of Spam." Instead of relying purely on isolated keywords, our objective was to evolve the system to analyze the structural characteristics of emails and the deeper semantic context of phrases. This report details the successful deployment of a robust comparative system that benchmarks traditional linear models (Logistic Regression, SVM) enhanced with structural metadata against modern neural architectures (Word2Vec), ultimately proving that explicit structural context combined with n-gram representations offers superior generalizability.
+For the final phase of our project, we focused on modeling ``The Shape of Spam.'' Instead of relying purely on isolated keywords, our objective was to evolve the system to analyze the structural characteristics of emails and the deeper semantic context of phrases. This report details the successful deployment of a robust comparative system that benchmarks keyword-based approaches, traditional linear models (Logistic Regression, SVM) enhanced with structural metadata, and modern neural architectures (Word2Vec), evaluating the strengths of each paradigm for cross-domain generalizability.
+
+Our proposal initially outlined an aspiration to transition toward multi-class classification (Real, Phishing, Promotional). However, the publicly available datasets used in this project (TREC 2007 and SpamAssassin) only provide binary labels (Ham vs.\ Spam). We therefore focused our efforts on maximizing binary classification performance under domain shift, which proved to be a substantial challenge in its own right. Multi-class categorization remains a compelling direction for future work with appropriately labeled corpora.
 
 \section{Methodology and Pipeline}
-Our enhanced software architecture is implemented in Python, leveraging Scikit-learn for machine learning algorithms, Pandas for data manipulation, NLTK for linguistic normalization, and Gensim for neural embeddings. The pipeline is structured into three sequential stages: Data Preprocessing, Vectorization (TF-IDF and Word2Vec streams), and Classifier Modeling.
+Our enhanced software architecture is implemented in Python, leveraging Scikit-learn for machine learning algorithms and pipeline orchestration, Pandas for data manipulation, NLTK for linguistic normalization, and Gensim for neural embeddings. The pipeline is structured into three sequential stages: Data Preprocessing, Vectorization (TF-IDF and Word2Vec streams), and Classifier Modeling.
 
 \subsection{Dataset Selection and Ingestion}
-To simulate real-world conditions where a model must evaluate out-of-distribution (OOD) data, we maintain our cross-corpus evaluation strategy. The model is trained on the Enron Spam Dataset (corporate communications) and tested on the Apache SpamAssassin Public Corpus (wild internet traffic). 
+To simulate real-world conditions where a model must evaluate out-of-distribution (OOD) data, we maintain our cross-corpus evaluation strategy. The model is trained on the TREC 2007 Spam Dataset (corporate communications) and tested on the Apache SpamAssassin Public Corpus (wild internet traffic). After preprocessing and deduplication, the training set contains 32,091 instances (12,448 ham, 19,643 spam) and the test set contains 3,784 instances (2,472 ham, 1,312 spam).
 
-Our custom recursive MIME parser traverses the nested structures of raw `.eml` files in the SpamAssassin corpus, seamlessly falling back to extracting HTML payloads when plain text is unavailable.
+Our custom recursive MIME parser traverses the nested structures of raw \texttt{.eml} files in the SpamAssassin corpus, seamlessly falling back to extracting HTML payloads when plain text is unavailable.
 
 \subsection{Preprocessing and Lemmatization}
-Raw email data contains immense structural noise. Our preprocessing module applies a sequences of normalizations:
+Raw email data contains immense structural noise. Our preprocessing module applies a sequence of normalizations:
 \begin{enumerate}
     \item \textbf{HTML Stripping:} Residual HTML tag artifacts are removed.
-    \item \textbf{Regex Normalization:} URLs are replaced with a generic "URL" token, and excessive non-essential characters are neutralized while preserving critical structural punctuation like exclamation marks and question marks.
-    \item \textbf{Lemmatization:} To improve the model's ability to map identical concepts across different vocabularies, we integrated the NLTK \textit{WordNetLemmatizer}. This reduces varying word forms (e.g., "winning", "wins", "winner") to their semantic root ("win").
+    \item \textbf{Regex Normalization:} URLs are replaced with a generic ``URL'' token, and excessive non-essential characters are neutralized while preserving critical structural punctuation like exclamation marks and question marks.
+    \item \textbf{Lemmatization:} To improve the model's ability to map identical concepts across different vocabularies, we integrated the NLTK \textit{WordNetLemmatizer}. This reduces varying word forms (e.g., ``winning'', ``wins'', ``winner'') to their semantic root (``win'').
+    \item \textbf{Stop Word Removal:} High-frequency function words are removed during TF-IDF vectorization via Scikit-learn's built-in English stop word list, reducing noise in the feature space.
 \end{enumerate}
 
 \subsection{Structural Feature Engineering}
-A core finding from our milestone was that spam emails exhibit a distinct structural shape independent of their content. We engineered a structural metadata extractor that computes 22 unique features. Key features include:
+A core finding from our milestone was that spam emails exhibit a distinct structural shape independent of their content. We engineered a structural metadata extractor that computes 21 unique features. These features are concatenated with the text-based feature vectors via Scikit-learn's \texttt{ColumnTransformer} and normalized using \texttt{StandardScaler} before being fed to the classifiers. Key features include:
 \begin{itemize}
     \item \textbf{URL Density:} The ratio of hyperlinks to the total word count.
-    \item \textbf{Punctuation Intensity:} Specific counting of "!" and "?" which are heavily utilized in phishing urgency hooks.
-    \item \textbf{Capitalization Ratios:} The percentage of all-caps tokens to identify "shouting" promotional emails.
+    \item \textbf{Punctuation Intensity:} Specific counting of ``!'' and ``?'' which are heavily utilized in phishing urgency hooks.
+    \item \textbf{Capitalization Ratios:} The percentage of all-caps tokens to identify ``shouting'' promotional emails.
     \item \textbf{Sender Domain Patterns:} A binary check for domain validity and character ratio analysis on the sender string.
 \end{itemize}
 
 \section{Exploratory Data Analysis (EDA)}
-We generated comprehensive EDA plots to confirm the integrity of our processed, aggregated datasets (33,716 Enron training instances; 3,898 SpamAssassin testing instances).
+We generated comprehensive EDA plots to confirm the integrity of our processed, aggregated datasets (32,091 training instances; 3,784 testing instances after deduplication).
 
 \begin{figure}[h]
   \centering
@@ -99,20 +102,28 @@ As seen in Figure \ref{fig:eda_length}, text length remains a highly discriminat
 \end{figure*}
 
 \section{Modeling Strategies}
-We developed three distinct modeling pipelines to evaluate varying paradigms of text representation.
+We developed five distinct modeling configurations to evaluate varying paradigms of text representation and the impact of structural metadata.
 
-\subsection{TF-IDF Models (Logistic \& SVM)}
-We upgraded our baseline Term Frequency-Inverse Document Frequency (TF-IDF) Vectorizer (restricted to a 5,000 max vocabulary) to analyze both unigrams and bigrams (\(ngram\_range=(1,2)\)). This allows the models to represent phrase-level dependencies (e.g., "bank account" or "act now"). 
+\subsection{Keyword Baseline (CountVectorizer)}
+As a baseline, we implemented a simple Bag-of-Words model using Scikit-learn's \texttt{CountVectorizer} with unigrams only (\(ngram\_range=(1,1)\)) and no structural features. This represents a traditional keyword-matching approach without term-weighting or phrase-level context, serving as the lower bound for our comparative analysis.
+
+\subsection{TF-IDF Models}
+We evaluated TF-IDF representations with a 5,000 max-feature vocabulary in two configurations:
 \begin{itemize}
-    \item \textbf{Logistic Regression:} Served as our enhanced baseline classifier.
+    \item \textbf{TF-IDF Unigram Only:} Uses \(ngram\_range=(1,1)\) without structural features, isolating the contribution of IDF weighting over raw keyword counts.
+    \item \textbf{TF-IDF Bigram + Structural:} Uses \(ngram\_range=(1,2)\) with all 21 structural metadata features appended. This allows the models to represent phrase-level dependencies (e.g., ``bank account'' or ``act now'') while simultaneously analyzing the email's structural shape.
+\end{itemize}
+We trained both Logistic Regression and Linear SVM classifiers on the bigram+structural configuration:
+\begin{itemize}
+    \item \textbf{Logistic Regression:} Served as our enhanced baseline classifier with probabilistic output.
     \item \textbf{Linear SVM:} Due to its capacity to find maximum-margin hyperplanes in high-dimensional feature spaces, LinearSVC handles sparse linguistic matrices exceptionally well.
 \end{itemize}
 
 \subsection{Word2Vec Neural Embeddings}
-To contrast with the high-dimensional TF-IDF sparse matrices, we trained a Continuous Bag-of-Words Word2Vec model on our corpus using Gensim. This generates a dense 50-dimensional latent space where words spanning similar contexts are positioned in proximity. Entire documents are converted to fixed-length numeric vectors by calculating the mean centroid of their constituent word vectors. These representation vectors are then classified using a balanced Logistic Regression model.
+To contrast with the high-dimensional TF-IDF sparse matrices, we trained a Continuous Bag-of-Words Word2Vec model on our corpus using Gensim. This generates a dense 50-dimensional latent space where words sharing similar contexts are positioned in proximity. Entire documents are converted to fixed-length numeric vectors by calculating the mean centroid of their constituent word vectors. These representation vectors are concatenated with the 21 structural metadata features and classified using a balanced Logistic Regression model.
 
 \section{System Performance and Results}
-We evaluated our final configurations via 5-fold cross-validation on the training set mapping and a final evaluation on the SpamAssassin out-of-distribution set, tracking Precision, Recall, Accuracy, and \(F_1\)-score (Table \ref{tab:results}).
+We evaluated our final configurations via 5-fold cross-validation on the training set and a final evaluation on the SpamAssassin out-of-distribution test set, tracking Precision, Recall, Accuracy, and \(F_1\)-score (Table \ref{tab:results}).
 
 \begin{table}[h]
 \centering
@@ -121,70 +132,96 @@ We evaluated our final configurations via 5-fold cross-validation on the trainin
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Model & Accuracy & Precision & Recall & F1-Score \\ \midrule
-Baseline (Milestone) & 64.16\% & 0.00 & 0.00 & 0.00 \\
-\textbf{Logistic (Final)} & 71.99\% & 0.55 & \textbf{0.96} & 0.70 \\
-\textbf{Linear SVM (Final)} & \textbf{73.34\%} & \textbf{0.57} & 0.92 & \textbf{0.71} \\
-Word2Vec Centroid & 70.80\% & 0.53 & 0.88 & 0.67 \\ \bottomrule
+Milestone Baseline & 64.16\% & 0.00 & 0.00 & 0.00 \\
+Keyword (BoW) & 69.87\% & 0.54 & 0.96 & 0.69 \\
+TF-IDF Unigram & 72.91\% & 0.56 & 0.96 & 0.71 \\
+Logistic (Bigram+Struct) & 69.45\% & 0.54 & 0.82 & 0.65 \\
+\textbf{Linear SVM (Bigram+Struct)} & \textbf{74.39\%} & \textbf{0.59} & 0.84 & 0.70 \\
+\textbf{Word2Vec + Structural} & 81.21\% & 0.68 & 0.88 & \textbf{0.76} \\ \bottomrule
 \end{tabular}
 \end{table}
 
-During the 5-fold cross-validation on the internal Enron dataset, all models achieved near-perfect F1-scores (\(\sim 0.99\pm0.001\)). However, evaluating against the external SpamAssassin test set provided the true measure of their cross-domain generalizability.
+During the 5-fold cross-validation on the internal training dataset, all models achieved near-perfect F1-scores: Keyword Baseline (\(0.993 \pm 0.002\)), TF-IDF Unigram (\(0.993 \pm 0.001\)), Logistic Bigram+Structural (\(0.992 \pm 0.002\)), and Linear SVM Bigram+Structural (\(0.995 \pm 0.002\)). However, evaluating against the external SpamAssassin test set provided the true measure of their cross-domain generalizability.
+
+\subsection{Feature Representation Comparison}
+The progression from keyword baseline to TF-IDF unigram demonstrates the value of IDF term weighting: accuracy improved from 69.87\% to 72.91\% by down-weighting common terms and emphasizing discriminative vocabulary. Both models achieved comparable recall ($\sim$96\%), but TF-IDF's improved precision (0.56 vs.\ 0.54) drove the accuracy gain.
+
+Adding bigram context and structural metadata in the Logistic model (69.45\%) did not outperform the unigram-only baseline, revealing an interesting finding: the structural features, while informative for in-domain classification, introduced additional noise under domain shift. The Linear SVM proved more robust to this effect, achieving the highest TF-IDF accuracy (74.39\%) by leveraging its maximum-margin decision boundary to better separate the enriched feature space.
 
 \subsection{Confusion Matrix Analysis}
-The addition of structural formatting features and lemmatization completely resolved our milestone failure. The progression is visualized in Figure \ref{fig:cm_comparison}.
+The addition of lemmatization, stop word removal, and enriched feature representations completely resolved our milestone failure. The progression is visualized in Figure \ref{fig:cm_comparison}.
 \begin{figure*}[t]
   \centering
-  \begin{subfigure}[b]{0.24\textwidth}
-      \includegraphics[width=\textwidth]{outputs/tfidf_confusion_matrix.png}
-      \caption{Milestone Baseline}
+  \begin{subfigure}[b]{0.19\textwidth}
+      \includegraphics[width=\textwidth]{outputs/keyword_baseline_confusion_matrix.png}
+      \caption{Keyword Baseline}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.24\textwidth}
+  \begin{subfigure}[b]{0.19\textwidth}
+      \includegraphics[width=\textwidth]{outputs/tfidf_unigram_confusion_matrix.png}
+      \caption{TF-IDF Unigram}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.19\textwidth}
       \includegraphics[width=\textwidth]{outputs/logistic_confusion_matrix.png}
-      \caption{Final Logistic}
+      \caption{Logistic (Bi+Struct)}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.24\textwidth}
+  \begin{subfigure}[b]{0.19\textwidth}
       \includegraphics[width=\textwidth]{outputs/svm_confusion_matrix.png}
-      \caption{Final SVM}
+      \caption{SVM (Bi+Struct)}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.24\textwidth}
+  \begin{subfigure}[b]{0.19\textwidth}
       \includegraphics[width=\textwidth]{outputs/w2v_confusion_matrix.png}
-      \caption{Word2Vec Neural}
+      \caption{Word2Vec + Struct}
   \end{subfigure}
-  \caption{Confusion matrix comparison highlighting the recovery of spam detection capabilities.}
+  \caption{Confusion matrices for all five model configurations, illustrating the progression from keyword baseline through TF-IDF variants to neural embeddings.}
   \label{fig:cm_comparison}
 \end{figure*}
 
-Our final \textbf{Logistic Regression} model emerged as an exceptionally sensitive filter, minimizing false negatives and achieving an outstanding 96.11\% spam recall. \textbf{Linear SVM} provided the highest comprehensive accuracy (73.34\%) by drawing a cleaner, wider decision boundary, suppressing the false-positive rate compared to the logistic thresholding. Though \textbf{Word2Vec} presented an improvement over our baseline, it failed to surpass the TF-IDF approaches—demonstrating that predicting spam across domains relies more heavily on literal sparse indicators (e.g., explicit phrase occurrence) than broad semantic similarities.
+The \textbf{Word2Vec + Structural} model emerged as the strongest overall performer, achieving the highest accuracy (81.21\%) and F1-score (0.76). Its dense semantic representations generalized more effectively across the domain gap than sparse TF-IDF features, while the structural metadata provided complementary signals about email formatting patterns. Among the TF-IDF family, \textbf{Linear SVM} provided the best accuracy (74.39\%) by drawing a cleaner, wider decision boundary, suppressing the false-positive rate compared to logistic thresholding.
 
 \subsection{Precision-Recall Trade-offs}
 For real-world deployment, systems must balance aggressive spam filtration against the unacceptable risk of discarding legitimate correspondence.
 
 \begin{figure*}[t]
   \centering
-  \begin{subfigure}[b]{0.32\textwidth}
+  \begin{subfigure}[b]{0.19\textwidth}
+      \includegraphics[width=\textwidth]{outputs/keyword_baseline_pr_curve.png}
+      \caption{Keyword Baseline}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.19\textwidth}
+      \includegraphics[width=\textwidth]{outputs/tfidf_unigram_pr_curve.png}
+      \caption{TF-IDF Unigram}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.19\textwidth}
       \includegraphics[width=\textwidth]{outputs/logistic_pr_curve.png}
-      \caption{Logistic (TF-IDF)}
+      \caption{Logistic (Bi+Struct)}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.32\textwidth}
+  \begin{subfigure}[b]{0.19\textwidth}
       \includegraphics[width=\textwidth]{outputs/svm_pr_curve.png}
-      \caption{SVM (TF-IDF)}
+      \caption{SVM (Bi+Struct)}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.32\textwidth}
+  \begin{subfigure}[b]{0.19\textwidth}
       \includegraphics[width=\textwidth]{outputs/w2v_pr_curve.png}
-      \caption{Word2Vec (Neural)}
+      \caption{Word2Vec + Struct}
   \end{subfigure}
-  \caption{Precision-Recall curves evaluating decision threshold margins.}
+  \caption{Precision-Recall curves for all five models, evaluating decision threshold margins across the full recall spectrum.}
   \label{fig:pr_comparison}
 \end{figure*}
 
-As shown via the Precision-Recall curves in Figure \ref{fig:pr_comparison}, the Linear SVM (Figure 5b) maintains consistent Area Under the Curve (AUC) stability. It retains a respectable level of precision without undergoing a severe dropoff as recall is aggressively scaled, granting administrators reliable margins when configuring production spam thresholds.
+As shown via the Precision-Recall curves in Figure \ref{fig:pr_comparison}, the Word2Vec model (Figure 5e) maintains the strongest precision across recall levels. The keyword baseline and TF-IDF unigram models (Figures 5a--5b) show rapid precision degradation at high recall, while the structurally-enriched SVM (Figure 5d) retains competitive precision-recall stability, granting administrators reliable margins when configuring production spam thresholds.
 
 \section{Conclusion}
-Our final project implementation successfully transitions from a brittle keyword matcher subject to severe domain shift into a structurally aware, generalizable detection engine. Through comparative benchmark testing, our hypothesis is affirmed: while Neural Embeddings offer impressive dense context mapping, a computationally efficient, highly-dimensional Bigram TF-IDF space enriched with explicitly engineered structural indicators remains the optimal architecture for generalized spam filtering.
+Our final project implementation successfully transitions from a brittle keyword matcher subject to severe domain shift into a structurally aware, generalizable detection engine. Through a systematic five-model comparative benchmark---spanning keyword counts, TF-IDF with unigrams, TF-IDF bigrams enriched with structural metadata, and Word2Vec neural embeddings---we evaluated the progression from simple to sophisticated feature representations.
+
+Our results reveal that dense neural embeddings (Word2Vec) combined with structural metadata achieved the highest cross-domain accuracy (81.21\%), outperforming all sparse TF-IDF variants. Among the TF-IDF models, the Linear SVM with bigram context and structural features achieved the best accuracy (74.39\%), demonstrating that maximum-margin classifiers are well-suited for the high-dimensional, noisy feature spaces characteristic of cross-domain spam detection. The keyword baseline and unigram TF-IDF models achieved strong recall ($>$95\%) but at the cost of precision, highlighting the tradeoff between aggressive spam catching and false positive suppression.
+
+While our proposal initially envisioned multi-class classification (Real, Phishing, Promotional), the binary-labeled nature of available public datasets constrained this exploration. This remains a promising avenue for future work with richer annotation schemes.
 
 \end{document}

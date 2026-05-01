@@ -11,7 +11,10 @@ from src.preprocessor import (
     prepare_datasets,
 )
 from src.eda import run_eda
-from src.TF_IDF_model import train_tfidf_model, get_tfidf_predictions, evaluate_tfidf_model
+from src.TF_IDF_model import (
+    train_tfidf_model, get_tfidf_predictions, evaluate_tfidf_model,
+    get_feature_columns,
+)
 from src.w2v_model import train_w2v_model, get_w2v_predictions, evaluate_w2v_model
 
 DATASET_DIR = Path("dataset")
@@ -20,13 +23,41 @@ TEST_DIR = DATASET_DIR / "test"
 TRAIN_ARCHIVE = DATASET_DIR / "train.zip"
 TEST_ARCHIVE = DATASET_DIR / "test.zip"
 
+
 def run_cross_validation(model, X, y, cv=5):
-    """
-    Perform K-fold cross-validation and print results.
-    """
-    print(f"\nPerforming {cv}-fold Cross-Validation...")
+    """Perform K-fold cross-validation and print results."""
+    print(f"\n  {cv}-fold Cross-Validation...")
     scores = cross_val_score(model, X, y, cv=cv, scoring='f1')
     print(f"  F1-Score Mean: {scores.mean():.4f} (+/- {scores.std() * 2:.4f})")
+    return scores.mean(), scores.std()
+
+
+def run_pipeline(name, train_df, test_df, *, model_type='logistic',
+                 ngram_range=(1, 2), use_structural=True,
+                 vectorizer_type='tfidf', do_cv=True):
+    """Train, cross-validate, predict, and evaluate a single TF-IDF-family model."""
+    print(f"\n{'='*60}")
+    print(f"  Pipeline: {name}")
+    print(f"{'='*60}")
+
+    model = train_tfidf_model(
+        train_df, model_type=model_type, ngram_range=ngram_range,
+        use_structural=use_structural, vectorizer_type=vectorizer_type
+    )
+
+    if do_cv:
+        cols = get_feature_columns(use_structural)
+        run_cross_validation(model, train_df[cols], train_df['label'])
+
+    preds = get_tfidf_predictions(model, test_df, use_structural=use_structural)
+    # Use the pipeline name (lowercased, no spaces) for file naming
+    file_tag = name.lower().replace(" ", "_").replace("+", "").replace("(", "").replace(")", "")
+    metrics = evaluate_tfidf_model(
+        test_df['label'], preds, model, test_df,
+        model_name=file_tag, use_structural=use_structural
+    )
+    return metrics
+
 
 def main():
     ensure_archive_extracted(TRAIN_CSV, TRAIN_ARCHIVE, DATASET_DIR)
@@ -44,48 +75,66 @@ def main():
     test_df = preprocess(test_df)
     train_df, test_df = prepare_datasets(train_df, test_df)
 
-    # Combine datasets for EDA purposes
+    # EDA on combined corpus
     combined_df = pd.concat([train_df, test_df], ignore_index=True)
     run_eda(combined_df)
 
-    # 1. Logistic Regression Pipeline
-    print("\n--- Pipeline 1: Logistic Regression ---")
-    tfidf_logistic = train_tfidf_model(train_df, model_type='logistic')
-    
-    # Cross-validation on training set
-    run_cross_validation(tfidf_logistic, train_df['text'].fillna(""), train_df['label'])
-    
-    # Prediction and Evaluation
-    tfidf_log_preds = get_tfidf_predictions(tfidf_logistic, test_df)
-    evaluate_tfidf_model(test_df['label'], tfidf_log_preds, tfidf_logistic, test_df, model_name="logistic")
+    # ------------------------------------------------------------------
+    # 1. Keyword Baseline  (CountVectorizer, unigrams only, NO structural)
+    # ------------------------------------------------------------------
+    run_pipeline(
+        "Keyword Baseline", train_df, test_df,
+        model_type='logistic', ngram_range=(1, 1),
+        use_structural=False, vectorizer_type='count', do_cv=True
+    )
 
-    # 2. Linear SVM Pipeline
-    print("\n--- Pipeline 2: Linear SVM ---")
-    tfidf_svm = train_tfidf_model(train_df, model_type='svm')
-    
-    # Cross-validation on training set
-    run_cross_validation(tfidf_svm, train_df['text'].fillna(""), train_df['label'])
-    
-    # Prediction and Evaluation
-    tfidf_svm_preds = get_tfidf_predictions(tfidf_svm, test_df)
-    evaluate_tfidf_model(test_df['label'], tfidf_svm_preds, tfidf_svm, test_df, model_name="svm")
+    # ------------------------------------------------------------------
+    # 2. TF-IDF Unigram Only  (no structural) — for ngram comparison
+    # ------------------------------------------------------------------
+    run_pipeline(
+        "TFIDF Unigram", train_df, test_df,
+        model_type='logistic', ngram_range=(1, 1),
+        use_structural=False, vectorizer_type='tfidf', do_cv=True
+    )
 
-    # 3. Word2Vec Pipeline
-    print("\n--- Pipeline 3: Word2Vec ---")
+    # ------------------------------------------------------------------
+    # 3. Logistic Regression  (TF-IDF bigrams + structural features)
+    # ------------------------------------------------------------------
+    run_pipeline(
+        "Logistic", train_df, test_df,
+        model_type='logistic', ngram_range=(1, 2),
+        use_structural=True, vectorizer_type='tfidf', do_cv=True
+    )
+
+    # ------------------------------------------------------------------
+    # 4. Linear SVM  (TF-IDF bigrams + structural features)
+    # ------------------------------------------------------------------
+    run_pipeline(
+        "SVM", train_df, test_df,
+        model_type='svm', ngram_range=(1, 2),
+        use_structural=True, vectorizer_type='tfidf', do_cv=True
+    )
+
+    # ------------------------------------------------------------------
+    # 5. Word2Vec Neural Embeddings  (+ structural features)
+    # ------------------------------------------------------------------
+    print(f"\n{'='*60}")
+    print(f"  Pipeline: Word2Vec")
+    print(f"{'='*60}")
     try:
-        w2v_model = train_w2v_model(train_df)
-        
-        # Cross-validation on training set (Slower, commented out for fast generation)
-        # run_cross_validation(w2v_model, train_df['text'].fillna(""), train_df['label'])
-        
-        # Prediction and Evaluation
-        w2v_preds = get_w2v_predictions(w2v_model, test_df)
-        evaluate_w2v_model(test_df['label'], w2v_preds, w2v_model, test_df)
+        w2v_model = train_w2v_model(train_df, use_structural=True)
+        w2v_preds = get_w2v_predictions(w2v_model, test_df, use_structural=True)
+        evaluate_w2v_model(test_df['label'], w2v_preds, w2v_model, test_df,
+                           use_structural=True)
     except Exception as e:
         print(f"Skipping Word2Vec due to error: {e}")
+        import traceback; traceback.print_exc()
 
-    print("\n--- Pipeline Complete ---")
-    print("Outputs (Confusion Matrices, PR Curves, EDA) generated in 'outputs/' directory.")
+    print(f"\n{'='*60}")
+    print("  All pipelines complete.")
+    print("  Outputs saved in 'outputs/' directory.")
+    print(f"{'='*60}")
+
 
 if __name__ == "__main__":
     main()
