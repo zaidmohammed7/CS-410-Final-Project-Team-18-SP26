@@ -1,7 +1,5 @@
 # CS 410 Final Project: Multi-Faceted Spam Email Detection
 
-Repository: https://github.com/zaidmohammed7/CS-410-Final-Project-Team-18-SP26
-
 This repository contains the final implementation of Team 18's Text-Based Spam Email Detection System. To address the challenge of cross-corpus domain shift (feature sparsity), this system employs a comparative architecture that evaluates emails through three distinct approaches:
 1. **Logistic Regression** (TF-IDF + Bigrams + Structural Metadata)
 2. **Linear SVM** (TF-IDF + Bigrams + Structural Metadata)
