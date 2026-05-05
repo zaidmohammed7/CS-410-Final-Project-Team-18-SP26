@@ -2,12 +2,27 @@
 
 \settopmatter{printacmref=false}
 \renewcommand\footnotetextcopyrightpermission[1]{}
-\pagestyle{plain}
+\acmConference[CS 410 Final Project]{CS 410 Final Project}{May 2026}{Champaign, Illinois, USA}
+\acmYear{2026}
+\copyrightyear{2026}
+\newcommand{\teamrunningauthors}{Nathan Xie (nathanx2), Vijwal Akula (vrakula2), Kangyi Jiang (kangyij2), Zaid Khan Mohammed (zmoha7), Brian Cochran (brianac5)}
 
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{booktabs}
+\usepackage{xurl}
+
+\fancypagestyle{standardpagestyle}{%
+  \fancyhf{}%
+  \fancyhead[C]{\scriptsize\teamrunningauthors}%
+  \fancyfoot[C]{\thepage}%
+}
+\fancypagestyle{firstpagestyle}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\thepage}%
+}
+\pagestyle{standardpagestyle}
 
 \begin{document}
 
@@ -29,6 +44,11 @@ Building upon our initial benchmark evaluation of corporate-to-internet cross-co
 \keywords{Spam Detection, Natural Language Processing, TF-IDF, Word2Vec, Linear SVM, Domain Shift, Structural Feature Engineering}
 
 \maketitle
+\fancyhf{}
+\fancyhead[C]{\scriptsize\teamrunningauthors}
+\fancyfoot[C]{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\pagestyle{fancy}
 
 \section{Introduction}
 Despite continuous advancements in automated heuristic filtering, email remains a primary vector for cyberattacks, phishing, and unwanted promotional distribution. Traditional spam filters often rely on static blacklists or rigid rule-based systems, which malicious actors easily bypass by rotating sender domains and obfuscating vocabulary. 
@@ -39,11 +59,11 @@ For the final phase of our project, we focused on modeling ``The Shape of Spam.'
 
 Our proposal initially outlined an aspiration to transition toward multi-class classification (Real, Phishing, Promotional). However, the publicly available datasets used in this project (TREC 2007 and SpamAssassin) only provide binary labels (Ham vs.\ Spam). We therefore focused our efforts on maximizing binary classification performance under domain shift, which proved to be a substantial challenge in its own right. Multi-class categorization remains a compelling direction for future work with appropriately labeled corpora.
 
-\section{Methodology and Pipeline}
+\section{Description}
 Our enhanced software architecture is implemented in Python, leveraging Scikit-learn for machine learning algorithms and pipeline orchestration, Pandas for data manipulation, NLTK for linguistic normalization, and Gensim for neural embeddings. The pipeline is structured into three sequential stages: Data Preprocessing, Vectorization (TF-IDF and Word2Vec streams), and Classifier Modeling.
 
 \subsection{Dataset Selection and Ingestion}
-To simulate real-world conditions where a model must evaluate out-of-distribution (OOD) data, we maintain our cross-corpus evaluation strategy. The model is trained on the TREC 2007 Spam Dataset (corporate communications) and tested on the Apache SpamAssassin Public Corpus (wild internet traffic). After preprocessing and deduplication, the training set contains 32,091 instances (12,448 ham, 19,643 spam) and the test set contains 3,784 instances (2,472 ham, 1,312 spam).
+To simulate real-world conditions where a model must evaluate out-of-distribution (OOD) data, we maintain our cross-corpus evaluation strategy. The model is trained on the preprocessed TREC 2007 Spam Dataset (corporate communications) and tested on the Apache SpamAssassin Public Corpus (wild internet traffic). After preprocessing and deduplication, the training set contains 32,091 instances (12,448 ham, 19,643 spam) and the test set contains 3,784 instances (2,472 ham, 1,312 spam).
 
 Our custom recursive MIME parser traverses the nested structures of raw \texttt{.eml} files in the SpamAssassin corpus, seamlessly falling back to extracting HTML payloads when plain text is unavailable.
 
@@ -122,8 +142,8 @@ We trained both Logistic Regression and Linear SVM classifiers on the bigram+str
 \subsection{Word2Vec Neural Embeddings}
 To contrast with the high-dimensional TF-IDF sparse matrices, we trained a Continuous Bag-of-Words Word2Vec model on our corpus using Gensim. This generates a dense 50-dimensional latent space where words sharing similar contexts are positioned in proximity. Entire documents are converted to fixed-length numeric vectors by calculating the mean centroid of their constituent word vectors. These representation vectors are concatenated with the 21 structural metadata features and classified using a balanced Logistic Regression model.
 
-\section{System Performance and Results}
-We evaluated our final configurations via 5-fold cross-validation on the training set and a final evaluation on the SpamAssassin out-of-distribution test set, tracking Precision, Recall, Accuracy, and \(F_1\)-score (Table \ref{tab:results}).
+\section{Evaluation and Discussion}
+We evaluated the TF-IDF-family configurations via 5-fold cross-validation on the training set and evaluated all final configurations on the SpamAssassin out-of-distribution test set, tracking Precision, Recall, Accuracy, and \(F_1\)-score (Table \ref{tab:results}).
 
 \begin{table}[h]
 \centering
@@ -215,7 +235,7 @@ For real-world deployment, systems must balance aggressive spam filtration again
   \label{fig:pr_comparison}
 \end{figure*}
 
-As shown via the Precision-Recall curves in Figure \ref{fig:pr_comparison}, the Word2Vec model (Figure 5e) maintains the strongest precision across recall levels. The keyword baseline and TF-IDF unigram models (Figures 5a--5b) show rapid precision degradation at high recall, while the structurally-enriched SVM (Figure 5d) retains competitive precision-recall stability, granting administrators reliable margins when configuring production spam thresholds.
+As shown via the Precision-Recall curves in Figure \ref{fig:pr_comparison}, the Word2Vec model (subfigure e) maintains the strongest precision across recall levels. The keyword baseline and TF-IDF unigram models (subfigures a--b) show rapid precision degradation at high recall, while the structurally-enriched SVM (subfigure d) retains competitive precision-recall stability, granting administrators reliable margins when configuring production spam thresholds.
 
 \section{Conclusion}
 Our final project implementation successfully transitions from a brittle keyword matcher subject to severe domain shift into a structurally aware, generalizable detection engine. Through a systematic five-model comparative benchmark---spanning keyword counts, TF-IDF with unigrams, TF-IDF bigrams enriched with structural metadata, and Word2Vec neural embeddings---we evaluated the progression from simple to sophisticated feature representations.
@@ -223,5 +243,14 @@ Our final project implementation successfully transitions from a brittle keyword
 Our results reveal that dense neural embeddings (Word2Vec) combined with structural metadata achieved the highest cross-domain accuracy (81.21\%), outperforming all sparse TF-IDF variants. Among the TF-IDF models, the Linear SVM with bigram context and structural features achieved the best accuracy (74.39\%), demonstrating that maximum-margin classifiers are well-suited for the high-dimensional, noisy feature spaces characteristic of cross-domain spam detection. The keyword baseline and unigram TF-IDF models achieved strong recall ($>$95\%) but at the cost of precision, highlighting the tradeoff between aggressive spam catching and false positive suppression.
 
 While our proposal initially envisioned multi-class classification (Real, Phishing, Promotional), the binary-labeled nature of available public datasets constrained this exploration. This remains a promising avenue for future work with richer annotation schemes.
+
+\section{Code Availability and Dataset References}
+The source code for this project, including data preprocessing, model training, and evaluation scripts, is publicly available at the following GitHub repository:
+\url{https://github.com/zaidmohammed7/CS-410-Final-Project-Team-18-SP26}
+
+The repository contains instructions for reproducing the experiments and generating the results presented in this report. The selected datasets are available at:
+\url{https://www.kaggle.com/datasets/imdeepmind/preprocessed-trec-2007-public-corpus-dataset/data}
+and
+\url{https://spamassassin.apache.org/old/publiccorpus/}.
 
 \end{document}
