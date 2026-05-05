@@ -38,6 +38,8 @@ To execute the full end-to-end evaluation suite (data ingestion, lemmatization, 
 python main.py
 ```
 
+The full pipeline runtime is approximately 7 minutes on our test machine.
+
 ## 📊 Output Interpretations
 
 The system automatically profiles the data and evaluates model performance. All generated visual artifacts are saved aggressively to the `outputs/` directory.
